@@ -2,38 +2,24 @@ package io.vokal.funinfunctional.model;
 
 import java.util.ArrayList;
 
-public abstract class SliceableFood implements Sliceable {
+public abstract class SliceableFood {
 
     protected String mDescription;
-    protected ArrayList<String> mSlices;
 
     protected abstract String singularDescriptor();
 
-    @Override
-    public void slice(int aSlices) {
-        mSlices = new ArrayList<>();
+    public ArrayList<Slice> slice(int aSlices) {
+        ArrayList<Slice> slices = new ArrayList<>();
 
         for (int i = 0; i < aSlices; i++) {
-            mSlices.add("A slice of " + singularDescriptor());
+            Slice slice = new Slice("A slice of " + singularDescriptor(), this.getClass());
+            slices.add(slice);
         }
+
+        return slices;
     }
 
-    @Override
     public String description() {
         return mDescription;
-    }
-
-    @Override
-    public ArrayList<String> slices() {
-        return mSlices;
-    }
-
-    public String getSlice() {
-        if (mSlices == null || mSlices.size() == 0) {
-            return null;
-        } else {
-            String slice = mSlices.remove(0);
-            return slice;
-        }
     }
 }

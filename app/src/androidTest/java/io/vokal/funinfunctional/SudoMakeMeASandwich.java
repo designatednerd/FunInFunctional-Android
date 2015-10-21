@@ -2,7 +2,6 @@ package io.vokal.funinfunctional;
 
 import io.vokal.funinfunctional.functional.FunctionalArray;
 import io.vokal.funinfunctional.model.*;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -12,47 +11,68 @@ import static junit.framework.Assert.assertEquals;
 
 public class SudoMakeMeASandwich {
 
-    private Bread mBread;
-    private Lettuce mLettuce;
-    private Tomato mTomato;
-    private Turkey mTurkey;
-
-    /******************
-     * TEST LIFECYCLE *
-     ******************/
-
-    @Before
-    public void beforeTest() {
-        mBread = new Bread();
-        mLettuce = new Lettuce();
-        mTomato = new Tomato();
-        mTurkey = new Turkey();
-    }
-
     /*******************
      * PRIVATE HELPERS *
      *******************/
 
-    private FunctionalArray<SliceableFood, String> foods() {
-        return new FunctionalArray<>(Arrays.asList(mBread, mLettuce, mTomato, mTurkey));
+    /**
+     * @return An arrayList containing the sliceable foods which should be used in a sandwich.
+     */
+    private ArrayList<SliceableFood> foods() {
+        return new ArrayList<>(
+                Arrays.asList(new Bread(),
+                        new Lettuce(),
+                        new Tomato(),
+                        new Turkey()));
     }
 
-    private ArrayList<String> sliceTheFoods() {
-        return foods().map(new FunctionalArray.MapFunction<SliceableFood, String>() {
+    /**
+     * @return An array of ArrayLists of slices of foods.
+     */
+    private ArrayList<ArrayList<Slice>> sliceTheFoods(ArrayList<SliceableFood> foods) {
+        //Convert the ArrayList to a functional array with the desired return type
+        FunctionalArray<SliceableFood, ArrayList<Slice>> functionalFoods = new FunctionalArray<>(foods);
+
+        //Apply the map function - it takes an array of the first type and returns an array of the second.
+        return functionalFoods.map(new FunctionalArray.MapFunction<SliceableFood, ArrayList<Slice>>() {
             @Override
-            public String applyFunctionToItem(SliceableFood item) {
-                item.slice(10);
-                return item.getSlice();
+            public ArrayList<Slice> applyFunctionToItem(SliceableFood item) {
+                //"Slice whatever this is into 10 pieces, and give all of them back to me."
+                return item.slice(10);
             }
         });
     }
 
-    private ArrayList<String> holdTheTomatoes(ArrayList<String> slicedFoods) {
-        FunctionalArray<String, String> slicesToFilter = new FunctionalArray<>(slicedFoods);
-        return slicesToFilter.filter(new FunctionalArray.FilterFunction<String>() {
+    /***
+     * @param slicedFoods A 2-dimensional array of slices - the outer array holds arrays of Slices of
+     *                    food for each food object.
+     * @return An array of slices with one type for each object.
+     */
+    private ArrayList<Slice> grabASlice(ArrayList<ArrayList<Slice>> slicedFoods) {
+        //Convert the 2D ArrayList into a functional array with the desired return type
+        FunctionalArray<ArrayList<Slice>, Slice> functionalSliced = new FunctionalArray<>(slicedFoods);
+
+        //Apply the map function - it takes an array of the first type and returns an array of the second.
+        return functionalSliced.map(new FunctionalArray.MapFunction<ArrayList<Slice>, Slice>() {
             @Override
-            public boolean resultShouldIncludeItem(String item) {
-                return !item.contains("tomato");
+            public Slice applyFunctionToItem(ArrayList<Slice> item) {
+                //"Grab me the first slice off the pile and hand it to me"
+                return item.get(0);
+            }
+        });
+    }
+
+    /***
+     * @param slicesOfFood An array of slices with each representing a different type of food.
+     * @return Slices which are not tomatoes.
+     */
+    private ArrayList<Slice> holdTheTomatoes(ArrayList<Slice> slicesOfFood) {
+        FunctionalArray<Slice, Slice> slicesToFilter = new FunctionalArray<>(slicesOfFood);
+        return slicesToFilter.filter(new FunctionalArray.FilterFunction<Slice>() {
+            @Override
+            public boolean resultShouldIncludeItem(Slice item) {
+                //"If this is not a tomato, give it to me"
+                return !item.isOfType(Tomato.class);
             }
         });
     }
@@ -63,46 +83,47 @@ public class SudoMakeMeASandwich {
 
     @Test
     public void slicing() {
-        ArrayList<String> slices = sliceTheFoods();
-        ArrayList<String> expectedFoods = new ArrayList<>(Arrays.asList("A slice of bread",
-                "A slice of lettuce",
-                "A slice of tomato",
-                "A slice of turkey"));
+        ArrayList<ArrayList<Slice>> slicedPile = sliceTheFoods(foods());
+        ArrayList<Slice> slices = grabASlice(slicedPile);
+        ArrayList<Slice> expectedFoods = new ArrayList<>(Arrays.asList(new Slice("A slice of bread", Bread.class),
+                new Slice("A slice of lettuce", Lettuce.class),
+                new Slice("A slice of tomato", Tomato.class),
+                new Slice("A slice of turkey", Turkey.class)));
 
         assertEquals(slices, expectedFoods);
-
-        assertEquals(mBread.slices().size(), 9);
-        assertEquals(mLettuce.slices().size(), 9);
-        assertEquals(mTomato.slices().size(), 9);
-        assertEquals(mTurkey.slices().size(), 9);
     }
 
     @Test
-    public void filteringOutTerribleFood() {
-        ArrayList<String> slices = sliceTheFoods();
-        ArrayList<String> holdTheTomatoes = holdTheTomatoes(slices);
+    public void holdingTheTomatoes() {
+        ArrayList<ArrayList<Slice>> slicedPile = sliceTheFoods(foods());
+        ArrayList<Slice> slices = grabASlice(slicedPile);
+        ArrayList<Slice> holdTheTomatoes = holdTheTomatoes(slices);
 
-        ArrayList<String> expectedFoods = new ArrayList<>(Arrays.asList("A slice of bread",
-                "A slice of lettuce",
-                "A slice of turkey"));
+        ArrayList<Slice> expectedFoods = new ArrayList<>(Arrays.asList(new Slice("A slice of bread", Bread.class),
+                new Slice("A slice of lettuce", Lettuce.class),
+                new Slice("A slice of turkey", Turkey.class)));
 
         assertEquals(holdTheTomatoes, expectedFoods);
     }
 
     @Test
     public void makingASandwich() {
-        ArrayList<String> slices = sliceTheFoods();
-        ArrayList<String> holdTheTomatoes = holdTheTomatoes(slices);
-        FunctionalArray<String, String> ingredients = new FunctionalArray<>(holdTheTomatoes);
+        ArrayList<ArrayList<Slice>> slicedPile = sliceTheFoods(foods());
+        ArrayList<Slice> slices = grabASlice(slicedPile);
+        ArrayList<Slice> holdTheTomatoes = holdTheTomatoes(slices);
+        FunctionalArray<Slice, String> ingredients = new FunctionalArray<>(holdTheTomatoes);
         final String starter = "Sandwich Contains: ";
-        String sammich = ingredients.reduce(starter, new FunctionalArray.ReduceFunction<String, String>() {
+        String sammich = ingredients.reduce(starter, new FunctionalArray.ReduceFunction<Slice, String>() {
 
             @Override
-            public String addToInitialValue(String initialValue, String itemToAdd) {
+            public String addToInitialValue(String initialValue, Slice itemToAdd) {
                 if (!initialValue.equals(starter)) {
-                    return initialValue + ", " + itemToAdd;
+                    //If this isn't the starting value, add a comma and a space then the value
+                    // to what was passed in.
+                    return initialValue + ", " + itemToAdd.getDescription();
                 } else {
-                    return initialValue + itemToAdd;
+                    //If this *is* the starting value, just add the value to what was passed in.
+                    return initialValue + itemToAdd.getDescription();
                 }
             }
         });
